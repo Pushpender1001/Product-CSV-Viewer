@@ -1,0 +1,3175 @@
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Sheet & CSV Product Viewer</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: [
+              "Inter",
+              "ui-sans-serif",
+              "system-ui",
+              "-apple-system",
+              "sans-serif"
+            ],
+            mono: [
+              "JetBrains Mono",
+              "SFMono-Regular",
+              "Menlo",
+              "monospace"
+            ]
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  >
+
+  <!-- PapaParse -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body
+  class="bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 selection:bg-indigo-100 min-h-screen flex flex-col transition-colors duration-200"
+>
+
+  <!-- =========================================================
+       HEADER
+  ========================================================== -->
+
+  <header
+    class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm"
+  >
+    <div
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between"
+    >
+
+      <div class="flex items-center space-x-3">
+
+        <div
+          class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-sm flex items-center justify-center"
+        >
+          <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+        </div>
+
+        <div>
+          <h1
+            class="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-none"
+          >
+            Sheet & CSV Product Viewer
+          </h1>
+
+          <p
+            class="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1 hidden sm:block"
+          >
+            Product-focused catalog viewer
+          </p>
+        </div>
+
+      </div>
+
+      <div class="flex items-center space-x-3">
+
+        <!-- Theme Toggle -->
+        <button
+          id="theme-toggle-btn"
+          class="inline-flex items-center justify-center p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition duration-150 cursor-pointer active:scale-95"
+          title="Toggle Day/Dark Theme"
+        >
+          <i
+            data-lucide="sun"
+            id="theme-icon-sun"
+            class="w-4 h-4 hidden"
+          ></i>
+
+          <i
+            data-lucide="moon"
+            id="theme-icon-moon"
+            class="w-4 h-4"
+          ></i>
+        </button>
+
+        <!-- Clear Data -->
+        <div id="header-actions" class="hidden">
+          <button
+            id="clear-btn-global"
+            class="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 text-xs font-semibold transition duration-150 cursor-pointer active:scale-95"
+          >
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Clear Data</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+
+  <!-- =========================================================
+       MAIN
+  ========================================================== -->
+
+  <main
+    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full flex flex-col"
+  >
+
+    <!-- Error -->
+    <div id="error-banner" class="hidden mb-6">
+
+      <div
+        class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-xl p-4 flex items-start space-x-3"
+      >
+
+        <div class="text-rose-600 shrink-0 mt-0.5">
+          <i data-lucide="alert-circle" class="w-5 h-5"></i>
+        </div>
+
+        <div class="flex-1">
+          <h3 class="font-semibold text-rose-800 dark:text-rose-300 text-sm">
+            Action Error Encountered
+          </h3>
+
+          <p
+            id="error-banner-text"
+            class="text-rose-600 dark:text-rose-400 text-xs mt-1 font-mono leading-relaxed"
+          ></p>
+        </div>
+
+        <button
+          onclick="dismissError()"
+          class="text-rose-400 hover:text-rose-700 p-0.5 cursor-pointer"
+        >
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+
+      </div>
+    </div>
+
+
+    <!-- =========================================================
+         DATA SOURCE PANEL
+    ========================================================== -->
+
+    <div id="control-panel" class="space-y-6">
+
+      <div class="text-center max-w-2xl mx-auto py-4">
+
+        <h2
+          class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight"
+        >
+          Load Your Product Catalog
+        </h2>
+
+        <p
+          class="text-slate-500 dark:text-slate-400 mt-2 text-xs sm:text-sm leading-relaxed"
+        >
+          Load products from Google Sheets, CSV files, or manual image URLs.
+          Product references are mapped case-insensitively.
+        </p>
+
+      </div>
+
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- =====================================================
+             GOOGLE SHEETS
+        ====================================================== -->
+
+        <div
+          class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between"
+        >
+
+          <div>
+
+            <div class="flex items-center space-x-3 mb-4">
+
+              <div
+                class="bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 p-2.5 rounded-xl"
+              >
+                <i data-lucide="globe" class="w-5 h-5"></i>
+              </div>
+
+              <div>
+                <h3
+                  class="font-semibold text-slate-800 dark:text-slate-200 text-sm"
+                >
+                  Google Sheets Link
+                </h3>
+
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                  Load online product data
+                </p>
+              </div>
+
+            </div>
+
+
+            <div class="space-y-3">
+
+              <div class="space-y-1">
+
+                <label
+                  class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                >
+                  Sheet Address / URL
+                </label>
+
+                <input
+                  type="url"
+                  id="sheetUrlInput"
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  class="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                />
+
+              </div>
+
+              <p
+                class="text-[10px] text-slate-400 dark:text-slate-500 leading-normal"
+              >
+                Required columns:
+                <strong>Image_URL, Name, Description, Itemnumber, Product_Id, Article, UOM</strong>.
+                Headers are case-insensitive.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div
+            class="pt-4 border-t border-slate-100 dark:border-slate-800 mt-5"
+          >
+
+            <button
+              id="loadBtnUrl"
+              class="w-full inline-flex items-center justify-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer transition active:scale-95 duration-100 shadow-sm"
+            >
+              <span>Load Google Sheet</span>
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             CSV UPLOAD
+        ====================================================== -->
+
+        <div
+          class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between"
+        >
+
+          <div>
+
+            <div class="flex items-center space-x-3 mb-4">
+
+              <div
+                class="bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 p-2.5 rounded-xl"
+              >
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+              </div>
+
+              <div>
+                <h3
+                  class="font-semibold text-slate-800 dark:text-slate-200 text-sm"
+                >
+                  Upload CSV File
+                </h3>
+
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                  Read local CSV directly
+                </p>
+              </div>
+
+            </div>
+
+
+            <div
+              id="drop-zone"
+              class="border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50/10 dark:hover:bg-indigo-950/10 rounded-xl p-5 text-center cursor-pointer transition flex flex-col justify-center items-center"
+            >
+
+              <i
+                data-lucide="upload"
+                class="w-6 h-6 text-slate-400 dark:text-slate-500 mb-2"
+              ></i>
+
+              <span
+                class="text-[11px] font-medium text-slate-600 dark:text-slate-300"
+              >
+                Drag files here or
+                <span class="text-indigo-600 underline">
+                  browse
+                </span>
+              </span>
+
+              <span
+                class="text-[9px] text-slate-400 dark:text-slate-500 mt-1"
+              >
+                Accepts CSV spreadsheets
+              </span>
+
+              <input
+                type="file"
+                id="csvUpload"
+                accept=".csv"
+                class="hidden"
+              />
+
+            </div>
+
+          </div>
+
+
+          <div
+            class="pt-4 border-t border-slate-100 dark:border-slate-800 mt-5"
+          >
+
+            <button
+              id="loadBtnCsv"
+              class="w-full inline-flex items-center justify-center space-x-1.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer transition active:scale-95 duration-100"
+            >
+              <span>Load CSV File</span>
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             MANUAL IMAGE URLS
+        ====================================================== -->
+
+        <div
+          class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between"
+        >
+
+          <div>
+
+            <div class="flex items-center space-x-3 mb-4">
+
+              <div
+                class="bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 p-2.5 rounded-xl"
+              >
+                <i data-lucide="image-plus" class="w-5 h-5"></i>
+              </div>
+
+              <div>
+                <h3
+                  class="font-semibold text-slate-800 dark:text-slate-200 text-sm"
+                >
+                  Manual Paste URLs
+                </h3>
+
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                  Put raw image links
+                </p>
+              </div>
+
+            </div>
+
+
+            <textarea
+              id="manual-urls-input"
+              placeholder="https://images.unsplash.com/...
+https://images.unsplash.com/..."
+              class="w-full min-h-[90px] text-[11px] font-mono rounded-lg border border-slate-200 dark:border-slate-800 p-2 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-150 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all leading-normal"
+            ></textarea>
+
+          </div>
+
+
+          <div
+            class="pt-4 border-t border-slate-100 dark:border-slate-800 mt-5"
+          >
+
+            <button
+              id="loadURLs"
+              class="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer transition active:scale-95 duration-100"
+            >
+              <span>Load Image List</span>
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Information -->
+      <div
+        class="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 max-w-4xl mx-auto"
+      >
+
+        <div class="flex space-x-3">
+
+          <i
+            data-lucide="info"
+            class="w-4 h-4 text-amber-700 dark:text-amber-500 shrink-0 mt-0.5"
+          ></i>
+
+          <div
+            class="text-[11px] sm:text-xs text-amber-800 dark:text-amber-300 leading-relaxed"
+          >
+
+            <p>
+              The application recognizes these headers case-insensitively:
+              <strong>Image_URL, Name, Description, Itemnumber, Product_Id, Article, UOM</strong>.
+            </p>
+
+            <p class="mt-2 pt-2 border-t border-amber-200/50 dark:border-amber-900/30">
+              Only Image, Name, Description, Item No., and Article No. are displayed.
+              Product ID and UMO remain internally available for copying.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         LOADING
+    ========================================================== -->
+
+    <div
+      id="loading-spinner"
+      class="hidden py-24 flex flex-col items-center justify-center space-y-4"
+    >
+
+      <div class="relative flex items-center justify-center">
+
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 dark:border-slate-800 border-t-indigo-600"
+        ></div>
+
+        <i
+          data-lucide="sparkles"
+          class="w-4 h-4 text-indigo-600 animate-pulse absolute"
+        ></i>
+
+      </div>
+
+      <div
+        class="text-center font-medium text-slate-600 dark:text-slate-400 text-xs"
+      >
+        Loading product data...
+      </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         RESULTS
+    ========================================================== -->
+
+    <div
+      id="results-section"
+      class="hidden space-y-6 flex-1 flex flex-col"
+    >
+
+      <!-- Search -->
+      <div
+        class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm"
+      >
+
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+
+          <div>
+
+            <h3
+              class="font-bold text-slate-800 dark:text-slate-200 text-sm flex items-center"
+            >
+              <i
+                data-lucide="search"
+                class="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2"
+              ></i>
+
+              Search Products
+            </h3>
+
+            <p
+              class="text-xs text-slate-500 dark:text-slate-400 mt-1"
+            >
+              Showing
+              <span
+                id="filtered-count"
+                class="font-bold text-indigo-600 dark:text-indigo-400 font-mono"
+              >0</span>
+              of
+              <span
+                id="total-count"
+                class="font-semibold text-slate-700 dark:text-slate-300"
+              >0</span>
+              products.
+            </p>
+
+          </div>
+
+
+          <button
+            id="reset-inputs-btn"
+            class="inline-flex items-center space-x-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition self-end sm:self-auto"
+          >
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Reset Search</span>
+          </button>
+
+        </div>
+
+
+        <div
+          class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800"
+        >
+
+          <div class="relative max-w-xl">
+
+            <span
+              class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
+            >
+              <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+
+            <input
+              type="text"
+              id="searchQuery"
+              placeholder="Search name, description, item no., article no., product ID, UMO..."
+              class="w-full text-xs pl-9 pr-8 py-2.5 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-colors"
+            />
+
+            <button
+              id="clear-search-btn"
+              class="hidden absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- No Match -->
+      <div
+        id="no-match-alert"
+        class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-12 px-4 text-center"
+      >
+
+        <i
+          data-lucide="search-x"
+          class="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3"
+        ></i>
+
+        <h4
+          class="font-semibold text-slate-800 dark:text-slate-200 text-sm"
+        >
+          No Product Found
+        </h4>
+
+        <p
+          class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1 leading-normal"
+        >
+          No products match your search.
+        </p>
+
+      </div>
+
+
+      <!-- Product Grid -->
+      <div
+        id="product-grid"
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+      ></div>
+
+    </div>
+
+  </main>
+
+
+  <!-- =========================================================
+       PRODUCT DETAIL MODAL
+  ========================================================== -->
+
+  <div
+    id="detail-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+  >
+
+    <!-- Backdrop -->
+    <div
+      id="modal-backdrop"
+      class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+    ></div>
+
+
+    <!-- Modal -->
+    <div
+      id="modal-box"
+      class="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row border border-slate-200 dark:border-slate-800 transform transition-all scale-95 opacity-0 duration-200"
+    >
+
+      <!-- Close -->
+      <button
+        id="modal-close-btn"
+        class="absolute top-4 right-4 z-20 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 p-1.5 rounded-full transition cursor-pointer active:scale-95"
+      >
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+
+      <!-- =====================================================
+           MODAL IMAGE
+      ====================================================== -->
+
+      <div
+        class="w-full md:w-1/2 bg-slate-50 dark:bg-slate-950 p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 relative min-h-[260px]"
+      >
+
+        <button
+          id="modal-copy-btn"
+          class="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-900 shadow-md text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 transition hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center group"
+          title="Copy product data"
+        >
+
+          <i
+            data-lucide="copy"
+            class="w-4 h-4"
+            id="modal-copy-icon"
+          ></i>
+
+          <span
+            class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[9px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none"
+            id="modal-copy-tooltip"
+          >
+            Copy Product Data
+          </span>
+
+        </button>
+
+
+        <img
+          id="modalImage"
+          src=""
+          alt="Product"
+          class="max-h-[280px] md:max-h-[360px] w-auto h-auto object-contain p-2"
+        />
+
+
+        <a
+          id="modalOriginalLink"
+          href=""
+          target="_blank"
+          rel="noreferrer"
+          class="absolute bottom-4 left-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm text-[10px] font-semibold font-mono flex items-center space-x-1"
+        >
+          <i data-lucide="external-link" class="w-3 h-3"></i>
+          <span>View Original Image</span>
+        </a>
+
+      </div>
+
+
+      <!-- =====================================================
+           MODAL DETAILS
+      ====================================================== -->
+
+      <div
+        class="w-full md:w-1/2 p-6 flex flex-col justify-between"
+      >
+
+        <div class="space-y-5">
+
+          <!-- Name -->
+          <div>
+
+            <h3
+              id="modalName"
+              class="font-bold text-slate-800 dark:text-slate-100 text-lg md:text-xl leading-tight"
+            ></h3>
+
+          </div>
+
+
+          <!-- Description -->
+          <div id="modalDescriptionContainer">
+
+            <h4
+              class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1"
+            >
+              Description
+            </h4>
+
+            <p
+              id="modalDescription"
+              class="text-xs text-slate-600 dark:text-slate-300 font-normal leading-relaxed overflow-y-auto max-h-[140px] pr-2 custom-scrollbar"
+            ></p>
+
+          </div>
+
+
+          <!-- Required Display Fields -->
+          <div
+            class="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-4 text-xs"
+          >
+
+            <!-- Item No -->
+            <div
+              class="flex justify-between items-center gap-4 py-1"
+            >
+
+              <span
+                class="text-slate-400 dark:text-slate-500 font-medium"
+              >
+                Item No.
+              </span>
+
+              <span
+                id="modalItemnumber"
+                class="text-slate-800 dark:text-slate-200 font-semibold font-mono text-right"
+              >
+                -
+              </span>
+
+            </div>
+
+
+            <!-- Article No -->
+            <div
+              class="flex justify-between items-center gap-4 py-1"
+            >
+
+              <span
+                class="text-slate-400 dark:text-slate-500 font-medium"
+              >
+                Article No.
+              </span>
+
+              <span
+                id="modalArticle"
+                class="text-slate-800 dark:text-slate-200 font-semibold font-mono text-right"
+              >
+                -
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- Modal Footer -->
+        <div
+          class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
+        >
+
+          <!-- Navigation -->
+          <div class="flex items-center space-x-2">
+
+            <button
+              id="modal-prev-btn"
+              class="inline-flex items-center justify-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95"
+              title="Previous Product"
+            >
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+
+            <button
+              id="modal-next-btn"
+              class="inline-flex items-center justify-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95"
+              title="Next Product"
+            >
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+
+          </div>
+
+
+          <button
+            id="modal-close-foot"
+            class="bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl cursor-pointer transition duration-150 shadow-sm active:scale-95"
+          >
+            Close View
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- =========================================================
+       FOOTER
+  ========================================================== -->
+
+  <footer
+    class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 mt-12"
+  >
+
+    <div
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-400 dark:text-slate-500"
+    >
+
+      <p>
+        &copy; 2026 Sheet & CSV Catalog Viewer. All rights reserved.
+      </p>
+
+    </div>
+
+  </footer>
+
+
+  <!-- =========================================================
+       FLOATING SCROLL CONTROLS
+  ========================================================== -->
+
+  <div
+    class="fixed bottom-6 right-6 z-40 flex flex-col space-y-2 select-none"
+  >
+
+    <button
+      id="scroll-to-top-btn"
+      class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-lg cursor-pointer transition duration-150 active:scale-90"
+      title="Scroll to Top"
+    >
+      <i data-lucide="arrow-up" class="w-4 h-4"></i>
+    </button>
+
+    <button
+      id="scroll-to-bottom-btn"
+      class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-lg cursor-pointer transition duration-150 active:scale-90"
+      title="Scroll to Bottom"
+    >
+      <i data-lucide="arrow-down" class="w-4 h-4"></i>
+    </button>
+
+  </div>
+
+
+  <!-- =========================================================
+       JAVASCRIPT
+  ========================================================== -->
+
+  <script>
+
+    /* ==========================================================
+       GLOBAL STATE
+    ========================================================== */
+
+    let allProducts = [];
+    let activeFilteredProducts = [];
+    let currentModalIndex = -1;
+
+    const parentEmptyImage =
+      "https://images.unsplash.com/photo-1594322436404-5a0526db4d13?q=80&w=300&auto=format&fit=crop";
+
+
+    /* ==========================================================
+       DOM REFERENCES
+    ========================================================== */
+
+    const uploadInput =
+      document.getElementById("csvUpload");
+
+    const urlInput =
+      document.getElementById("sheetUrlInput");
+
+    const manualArea =
+      document.getElementById("manual-urls-input");
+
+    const loadBtnUrl =
+      document.getElementById("loadBtnUrl");
+
+    const loadBtnCsv =
+      document.getElementById("loadBtnCsv");
+
+    const loadURLs =
+      document.getElementById("loadURLs");
+
+    const dropZone =
+      document.getElementById("drop-zone");
+
+    const errorBanner =
+      document.getElementById("error-banner");
+
+    const errorText =
+      document.getElementById("error-banner-text");
+
+    const loadingSpinner =
+      document.getElementById("loading-spinner");
+
+    const controlPanel =
+      document.getElementById("control-panel");
+
+    const resultsSection =
+      document.getElementById("results-section");
+
+    const searchBox =
+      document.getElementById("searchQuery");
+
+    const clearSearchBtn =
+      document.getElementById("clear-search-btn");
+
+    const resetFiltersBtn =
+      document.getElementById("reset-inputs-btn");
+
+    const clearBtnGlobal =
+      document.getElementById("clear-btn-global");
+
+    const headerActions =
+      document.getElementById("header-actions");
+
+    const productGrid =
+      document.getElementById("product-grid");
+
+    const noMatchAlert =
+      document.getElementById("no-match-alert");
+
+    const modal =
+      document.getElementById("detail-modal");
+
+    const modalBox =
+      document.getElementById("modal-box");
+
+    const modalBackdrop =
+      document.getElementById("modal-backdrop");
+
+    const modalCloseBtn =
+      document.getElementById("modal-close-btn");
+
+    const modalCloseFoot =
+      document.getElementById("modal-close-foot");
+
+    const themeToggleBtn =
+      document.getElementById("theme-toggle-btn");
+
+    const sunIcon =
+      document.getElementById("theme-icon-sun");
+
+    const moonIcon =
+      document.getElementById("theme-icon-moon");
+
+
+    /* ==========================================================
+       INITIALIZATION
+    ========================================================== */
+
+    document.addEventListener("DOMContentLoaded", () => {
+
+      setupEvents();
+
+      initializeTheme();
+
+      lucide.createIcons();
+
+    });
+
+
+    /* ==========================================================
+       ERROR HANDLING
+    ========================================================== */
+
+    function showError(message) {
+
+      errorText.innerText =
+        message || "Unknown error.";
+
+      errorBanner.classList.remove("hidden");
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+
+      lucide.createIcons();
+    }
+
+
+    function dismissError() {
+
+      errorBanner.classList.add("hidden");
+
+      errorText.innerText = "";
+    }
+
+
+    /* ==========================================================
+       CLEAR ALL DATA
+    ========================================================== */
+
+    function handleClearData() {
+
+      allProducts = [];
+
+      activeFilteredProducts = [];
+
+      currentModalIndex = -1;
+
+      urlInput.value = "";
+
+      uploadInput.value = "";
+
+      manualArea.value = "";
+
+      searchBox.value = "";
+
+      clearSearchBtn.classList.add("hidden");
+
+      dismissError();
+
+      resultsSection.classList.add("hidden");
+
+      headerActions.classList.add("hidden");
+
+      controlPanel.classList.remove("hidden");
+
+      loadingSpinner.classList.add("hidden");
+
+      noMatchAlert.classList.add("hidden");
+
+      productGrid.innerHTML = "";
+
+      closeModal();
+    }
+
+
+    /* ==========================================================
+       RESET SEARCH
+    ========================================================== */
+
+    function handleResetSearch() {
+
+      searchBox.value = "";
+
+      clearSearchBtn.classList.add("hidden");
+
+      applyFilters();
+    }
+
+
+    /* ==========================================================
+       EVENT SETUP
+    ========================================================== */
+
+    function setupEvents() {
+
+      /* Google Sheet */
+      loadBtnUrl.addEventListener(
+        "click",
+        () => loadAndDisplayData("url")
+      );
+
+
+      /* CSV */
+      loadBtnCsv.addEventListener("click", () => {
+
+        if (uploadInput.files.length > 0) {
+
+          loadAndDisplayData("csv");
+
+        } else {
+
+          uploadInput.click();
+
+        }
+
+      });
+
+
+      /* Manual URLs */
+      loadURLs.addEventListener(
+        "click",
+        () => loadAndDisplayData("manual")
+      );
+
+
+      /* File selection */
+      uploadInput.addEventListener(
+        "change",
+        (event) => {
+
+          if (event.target.files.length > 0) {
+
+            loadAndDisplayData("csv");
+
+          }
+
+        }
+      );
+
+
+      /* Google Sheet Enter */
+      urlInput.addEventListener(
+        "keyup",
+        (event) => {
+
+          if (event.key === "Enter") {
+
+            loadAndDisplayData("url");
+
+          }
+
+        }
+      );
+
+
+      /* Search */
+      searchBox.addEventListener(
+        "input",
+        () => {
+
+          if (searchBox.value.trim()) {
+
+            clearSearchBtn.classList.remove("hidden");
+
+          } else {
+
+            clearSearchBtn.classList.add("hidden");
+
+          }
+
+          applyFilters();
+
+        }
+      );
+
+
+      clearSearchBtn.addEventListener(
+        "click",
+        handleResetSearch
+      );
+
+
+      resetFiltersBtn.addEventListener(
+        "click",
+        handleResetSearch
+      );
+
+
+      clearBtnGlobal.addEventListener(
+        "click",
+        handleClearData
+      );
+
+
+      /* Drag enter */
+      ["dragenter", "dragover"].forEach(
+        eventName => {
+
+          dropZone.addEventListener(
+            eventName,
+            event => {
+
+              event.preventDefault();
+              event.stopPropagation();
+
+              dropZone.classList.add(
+                "border-indigo-500",
+                "bg-indigo-50/20"
+              );
+
+            }
+          );
+
+        }
+      );
+
+
+      /* Drag leave */
+      ["dragleave", "drop"].forEach(
+        eventName => {
+
+          dropZone.addEventListener(
+            eventName,
+            event => {
+
+              event.preventDefault();
+              event.stopPropagation();
+
+              dropZone.classList.remove(
+                "border-indigo-500",
+                "bg-indigo-50/20"
+              );
+
+            }
+          );
+
+        }
+      );
+
+
+      /* Drop */
+      dropZone.addEventListener(
+        "drop",
+        event => {
+
+          const files =
+            event.dataTransfer.files;
+
+          if (files && files.length > 0) {
+
+            uploadInput.files = files;
+
+            loadAndDisplayData("csv");
+
+          }
+
+        }
+      );
+
+
+      /* Modal */
+      modalCloseBtn.addEventListener(
+        "click",
+        closeModal
+      );
+
+      modalCloseFoot.addEventListener(
+        "click",
+        closeModal
+      );
+
+      modalBackdrop.addEventListener(
+        "click",
+        closeModal
+      );
+
+
+      /* Keyboard */
+      document.addEventListener(
+        "keydown",
+        event => {
+
+          if (
+            modal.classList.contains("hidden")
+          ) {
+            return;
+          }
+
+          if (event.key === "Escape") {
+
+            closeModal();
+
+          } else if (event.key === "ArrowLeft") {
+
+            navigateModalSequential(-1);
+
+          } else if (event.key === "ArrowRight") {
+
+            navigateModalSequential(1);
+
+          }
+
+        }
+      );
+
+
+      /* Modal Previous */
+      document
+        .getElementById("modal-prev-btn")
+        .addEventListener(
+          "click",
+          event => {
+
+            event.stopPropagation();
+
+            navigateModalSequential(-1);
+
+          }
+        );
+
+
+      /* Modal Next */
+      document
+        .getElementById("modal-next-btn")
+        .addEventListener(
+          "click",
+          event => {
+
+            event.stopPropagation();
+
+            navigateModalSequential(1);
+
+          }
+        );
+
+
+      /* Scroll */
+      document
+        .getElementById("scroll-to-top-btn")
+        .addEventListener(
+          "click",
+          () => {
+
+            window.scrollTo({
+              top: 0,
+              behavior: "smooth"
+            });
+
+          }
+        );
+
+
+      document
+        .getElementById("scroll-to-bottom-btn")
+        .addEventListener(
+          "click",
+          () => {
+
+            window.scrollTo({
+              top: document.documentElement.scrollHeight,
+              behavior: "smooth"
+            });
+
+          }
+        );
+
+    }
+
+
+    /* ==========================================================
+       THEME
+    ========================================================== */
+
+    function initializeTheme() {
+
+      const isDark =
+        localStorage.getItem("theme") === "dark" ||
+        (
+          localStorage.getItem("theme") === null &&
+          window.matchMedia(
+            "(prefers-color-scheme: dark)"
+          ).matches
+        );
+
+      applyTheme(isDark);
+    }
+
+
+    function applyTheme(isDark) {
+
+      if (isDark) {
+
+        document.documentElement.classList.add("dark");
+
+        sunIcon.classList.remove("hidden");
+
+        moonIcon.classList.add("hidden");
+
+        localStorage.setItem(
+          "theme",
+          "dark"
+        );
+
+      } else {
+
+        document.documentElement.classList.remove("dark");
+
+        sunIcon.classList.add("hidden");
+
+        moonIcon.classList.remove("hidden");
+
+        localStorage.setItem(
+          "theme",
+          "light"
+        );
+
+      }
+    }
+
+
+    themeToggleBtn.addEventListener(
+      "click",
+      () => {
+
+        const isDark =
+          document.documentElement.classList.contains("dark");
+
+        applyTheme(!isDark);
+
+      }
+    );
+
+
+    /* ==========================================================
+       MAIN DATA LOADER
+    ========================================================== */
+
+    async function loadAndDisplayData(sourceType) {
+
+      dismissError();
+
+      controlPanel.classList.add("hidden");
+
+      loadingSpinner.classList.remove("hidden");
+
+      try {
+
+        let items = [];
+
+        if (sourceType === "url") {
+
+          items =
+            await handleUrlFetch();
+
+        } else if (sourceType === "csv") {
+
+          items =
+            await handleCsvUpload();
+
+        } else if (sourceType === "manual") {
+
+          items =
+            handleManualUrls();
+
+        }
+
+
+        if (!items || items.length === 0) {
+
+          throw new Error(
+            "No products detected in the loaded source."
+          );
+
+        }
+
+
+        allProducts = items;
+
+        resultsSection.classList.remove("hidden");
+
+        headerActions.classList.remove("hidden");
+
+        applyFilters();
+
+      } catch (error) {
+
+        console.error(error);
+
+        showError(
+          error.message ||
+          "Failed loading product data."
+        );
+
+        controlPanel.classList.remove("hidden");
+
+      } finally {
+
+        loadingSpinner.classList.add("hidden");
+
+        lucide.createIcons();
+
+      }
+
+    }
+
+
+    /* ==========================================================
+       GOOGLE SHEET
+    ========================================================== */
+
+    async function handleUrlFetch() {
+
+      const urlStr =
+        urlInput.value.trim();
+
+      if (!urlStr) {
+
+        throw new Error(
+          "Please enter a valid Google Sheet or public CSV link."
+        );
+
+      }
+
+
+      const response =
+        await fetch(
+          `/api/fetch-sheet?url=${encodeURIComponent(urlStr)}`
+        );
+
+
+      if (!response.ok) {
+
+        const textErr =
+          await response.text();
+
+        let jsonErr;
+
+        try {
+
+          jsonErr =
+            JSON.parse(textErr);
+
+        } catch (_) {}
+
+        throw new Error(
+          jsonErr?.error ||
+          `Proxy responded with status ${response.status}`
+        );
+
+      }
+
+
+      const csvText =
+        await response.text();
+
+      return parseStringCSV(csvText);
+    }
+
+
+    /* ==========================================================
+       LOCAL CSV
+    ========================================================== */
+
+    function handleCsvUpload() {
+
+      const file =
+        uploadInput.files[0];
+
+      if (!file) {
+
+        throw new Error(
+          "Please select a valid CSV file."
+        );
+
+      }
+
+
+      return new Promise(
+        (resolve, reject) => {
+
+          const reader =
+            new FileReader();
+
+
+          reader.onload =
+            event => {
+
+              try {
+
+                const result =
+                  parseStringCSV(
+                    event.target.result
+                  );
+
+                resolve(result);
+
+              } catch (error) {
+
+                reject(error);
+
+              }
+
+            };
+
+
+          reader.onerror =
+            () => {
+
+              reject(
+                new Error(
+                  "Failed reading local CSV."
+                )
+              );
+
+            };
+
+
+          reader.readAsText(file);
+
+        }
+      );
+    }
+
+
+    /* ==========================================================
+       MANUAL IMAGE URLS
+    ========================================================== */
+
+    function handleManualUrls() {
+
+      const text =
+        manualArea.value.trim();
+
+      if (!text) {
+
+        throw new Error(
+          "Please enter at least one image URL."
+        );
+
+      }
+
+
+      const urls =
+        text
+          .split(/\r?\n/)
+          .map(url => url.trim())
+          .filter(Boolean);
+
+
+      if (urls.length === 0) {
+
+        throw new Error(
+          "No image URLs were loaded."
+        );
+
+      }
+
+
+      return urls.map(
+        (url, index) => ({
+
+          rowNumber: index + 1,
+
+          Image_URL: url,
+
+          Name: `Image ${index + 1}`,
+
+          Description:
+            "Manually pasted source URL",
+
+          Itemnumber: "-",
+
+          Product_Id: "-",
+
+          Article: "-",
+
+          UOM: "-"
+
+        })
+      );
+    }
+
+
+    /* ==========================================================
+       HEADER NORMALIZATION
+    ========================================================== */
+
+    function normalizeHeader(header) {
+
+      return String(header || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, "");
+    }
+
+
+    /* ==========================================================
+       CSV PARSER
+       
+       IMPORTANT:
+       Only required product fields are mapped.
+       Other CSV columns are intentionally ignored.
+    ========================================================== */
+
+    function parseStringCSV(text) {
+
+      const parsed =
+        Papa.parse(
+          text,
+          {
+            header: true,
+            skipEmptyLines: false
+          }
+        );
+
+
+      if (parsed.errors && parsed.errors.length > 0) {
+
+        console.warn(
+          "CSV parser warnings:",
+          parsed.errors
+        );
+
+      }
+
+
+      const data =
+        parsed.data;
+
+
+      if (!data || data.length === 0) {
+
+        throw new Error(
+          "The source file does not contain any records."
+        );
+
+      }
+
+
+      /*
+       * Map normalized header names to actual CSV headers.
+       *
+       * Supported:
+       *
+       * Image_URL
+       * Name
+       * Description
+       * Itemnumber
+       * Product_Id
+       * Article
+       * UOM
+       */
+
+      const headerMap = {};
+
+      const originalHeaders =
+        Object.keys(data[0] || {});
+
+
+      originalHeaders.forEach(
+        header => {
+
+          const normalized =
+            normalizeHeader(header);
+
+
+          if (
+            normalized === "imageurl" ||
+            normalized === "imageurls"
+          ) {
+
+            headerMap.Image_URL =
+              header;
+
+          } else if (
+            normalized === "name"
+          ) {
+
+            headerMap.Name =
+              header;
+
+          } else if (
+            normalized === "description"
+          ) {
+
+            headerMap.Description =
+              header;
+
+          } else if (
+            normalized === "itemnumber" ||
+            normalized === "itemno" ||
+            normalized === "itemnum"
+          ) {
+
+            headerMap.Itemnumber =
+              header;
+
+          } else if (
+            normalized === "productid"
+          ) {
+
+            headerMap.Product_Id =
+              header;
+
+          } else if (
+            normalized === "article" ||
+            normalized === "articleno" ||
+            normalized === "articlenumber"
+          ) {
+
+            headerMap.Article =
+              header;
+
+          } else if (
+            normalized === "uom" ||
+            normalized === "umo"
+          ) {
+
+            /*
+             * UOM is the official field.
+             *
+             * UMO is also accepted as an alias because
+             * the copy requirement refers to UMO.
+             */
+
+            headerMap.UOM =
+              header;
+
+          }
+
+        }
+      );
+
+
+      /*
+       * Image URL is required.
+       */
+
+      if (!headerMap.Image_URL) {
+
+        throw new Error(
+          'CSV must contain an "Image_URL" column (case-insensitive).'
+        );
+
+      }
+
+
+      /*
+       * Helper to safely retrieve a value.
+       */
+
+      function getValue(row, field) {
+
+        const header =
+          headerMap[field];
+
+        if (!header) {
+
+          return "";
+
+        }
+
+        const value =
+          row[header];
+
+        return value === null ||
+               value === undefined
+          ? ""
+          : String(value).trim();
+
+      }
+
+
+      /*
+       * Convert each CSV row into the
+       * simplified internal product object.
+       *
+       * IMPORTANT:
+       *
+       * Product_Id and UOM are NOT displayed,
+       * but they are preserved here for copying.
+       */
+
+      const mappedData =
+        data.map(
+          (row, index) => {
+
+            const imageUrl =
+              getValue(
+                row,
+                "Image_URL"
+              );
+
+            const name =
+              getValue(
+                row,
+                "Name"
+              );
+
+            const description =
+              getValue(
+                row,
+                "Description"
+              );
+
+            const itemNumber =
+              getValue(
+                row,
+                "Itemnumber"
+              );
+
+            const productId =
+              getValue(
+                row,
+                "Product_Id"
+              );
+
+            const article =
+              getValue(
+                row,
+                "Article"
+              );
+
+            const uom =
+              getValue(
+                row,
+                "UOM"
+              );
+
+
+            /*
+             * Ignore completely blank rows.
+             */
+
+            const isEmptyRow =
+              Object.values(row).every(
+                value =>
+                  !value ||
+                  !String(value).trim()
+              );
+
+
+            if (isEmptyRow) {
+
+              return null;
+
+            }
+
+
+            return {
+
+              /*
+               * Internal row identity.
+               * Used only by JavaScript for
+               * navigation/identification.
+               */
+              rowNumber: index + 1,
+
+              /*
+               * Required display field
+               */
+              Image_URL:
+                imageUrl,
+
+              /*
+               * Required display field
+               */
+              Name:
+                name || "No Name",
+
+              /*
+               * Required display field
+               */
+              Description:
+                description || "-",
+
+              /*
+               * Required display field
+               */
+              Itemnumber:
+                itemNumber || "-",
+
+              /*
+               * INTERNAL ONLY
+               *
+               * Not displayed anywhere.
+               */
+              Product_Id:
+                productId || "-",
+
+              /*
+               * Required display field
+               */
+              Article:
+                article || "-",
+
+              /*
+               * INTERNAL ONLY
+               *
+               * Not displayed anywhere.
+               */
+              UOM:
+                uom || "-"
+
+            };
+
+          }
+        );
+
+
+      const displayData =
+        mappedData.filter(
+          product => product !== null
+        );
+
+
+      if (displayData.length === 0) {
+
+        throw new Error(
+          "No valid product records were found."
+        );
+
+      }
+
+
+      return displayData;
+    }
+
+
+    /* ==========================================================
+       SEARCH
+       
+       Search includes both visible fields and the two internal
+       copy-only fields.
+       
+       It does NOT use Brand/Category/Price/Geo Zone/etc.
+    ========================================================== */
+
+    function applyFilters() {
+
+      const searchValue =
+        searchBox.value
+          .trim()
+          .toLowerCase();
+
+
+      const filtered =
+        allProducts.filter(
+          product => {
+
+            if (!searchValue) {
+
+              return true;
+
+            }
+
+
+            const searchableContent =
+              [
+                product.Name,
+                product.Description,
+                product.Itemnumber,
+                product.Article,
+                product.Product_Id,
+                product.UOM,
+                product.Image_URL
+              ]
+                .join(" ")
+                .toLowerCase();
+
+
+            return searchableContent.includes(
+              searchValue
+            );
+
+          }
+        );
+
+
+      activeFilteredProducts =
+        filtered;
+
+
+      document.getElementById(
+        "filtered-count"
+      ).innerText =
+        filtered.length;
+
+
+      document.getElementById(
+        "total-count"
+      ).innerText =
+        allProducts.length;
+
+
+      if (filtered.length === 0) {
+
+        noMatchAlert.classList.remove(
+          "hidden"
+        );
+
+        productGrid.classList.add(
+          "hidden"
+        );
+
+        productGrid.innerHTML = "";
+
+      } else {
+
+        noMatchAlert.classList.add(
+          "hidden"
+        );
+
+        productGrid.classList.remove(
+          "hidden"
+        );
+
+        renderGrid(filtered);
+
+      }
+
+    }
+
+
+    /* ==========================================================
+       COPY FORMAT
+       
+       EXACT ORDER:
+       
+       1. Image URL
+       2. Item No.
+       3. Product ID
+       4. Article No.
+       5. UMO
+       
+       One value per line.
+    ========================================================== */
+
+    function buildCopyText(product) {
+
+      /*
+       * This function receives the exact product object
+       * associated with the clicked card/modal.
+       *
+       * There is no lookup against another row.
+       */
+
+      return [
+        product.Image_URL || "",
+        product.Itemnumber || "",
+        product.Product_Id || "",
+        product.Article || "",
+        product.UOM || ""
+      ].join("\n");
+
+    }
+
+
+    /* ==========================================================
+       CLIPBOARD
+    ========================================================== */
+
+    async function copyProductData(
+      event,
+      product
+    ) {
+
+      if (event) {
+
+        event.preventDefault();
+
+        event.stopPropagation();
+
+      }
+
+
+      /*
+       * Build clipboard content directly from
+       * the exact product object.
+       */
+
+      const copyText =
+        buildCopyText(product);
+
+
+      try {
+
+        await navigator.clipboard.writeText(
+          copyText
+        );
+
+
+        showCopySuccess(
+          event?.currentTarget
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "Clipboard copy failed:",
+          error
+        );
+
+
+        /*
+         * Fallback for environments where
+         * navigator.clipboard is unavailable.
+         */
+
+        fallbackCopyText(
+          copyText
+        );
+
+        showCopySuccess(
+          event?.currentTarget
+        );
+
+      }
+
+    }
+
+
+    /* ==========================================================
+       CLIPBOARD FALLBACK
+    ========================================================== */
+
+    function fallbackCopyText(text) {
+
+      const textarea =
+        document.createElement("textarea");
+
+      textarea.value =
+        text;
+
+      textarea.style.position =
+        "fixed";
+
+      textarea.style.left =
+        "-9999px";
+
+      textarea.style.top =
+        "0";
+
+      document.body.appendChild(
+        textarea
+      );
+
+      textarea.focus();
+
+      textarea.select();
+
+      try {
+
+        document.execCommand(
+          "copy"
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Fallback clipboard copy failed:",
+          error
+        );
+
+      }
+
+      document.body.removeChild(
+        textarea
+      );
+
+    }
+
+
+    /* ==========================================================
+       COPY SUCCESS UI
+    ========================================================== */
+
+    function showCopySuccess(
+      button
+    ) {
+
+      if (!button) {
+
+        return;
+
+      }
+
+
+      const icon =
+        button.querySelector(
+          "i"
+        );
+
+      const tooltip =
+        button.querySelector(
+          "span"
+        );
+
+
+      if (!icon) {
+
+        return;
+
+      }
+
+
+      const originalIcon =
+        icon.getAttribute(
+          "data-lucide"
+        ) || "copy";
+
+
+      const originalTooltip =
+        tooltip
+          ? tooltip.innerText
+          : "";
+
+
+      icon.setAttribute(
+        "data-lucide",
+        "check"
+      );
+
+
+      icon.classList.add(
+        "text-green-600",
+        "dark:text-green-400"
+      );
+
+
+      if (tooltip) {
+
+        tooltip.innerText =
+          "Copied!";
+
+        tooltip.classList.remove(
+          "opacity-0"
+        );
+
+        tooltip.classList.add(
+          "opacity-100"
+        );
+
+      }
+
+
+      lucide.createIcons();
+
+
+      setTimeout(
+        () => {
+
+          icon.setAttribute(
+            "data-lucide",
+            originalIcon
+          );
+
+
+          icon.classList.remove(
+            "text-green-600",
+            "dark:text-green-400"
+          );
+
+
+          if (tooltip) {
+
+            tooltip.innerText =
+              originalTooltip;
+
+            tooltip.classList.add(
+              "opacity-0"
+            );
+
+            tooltip.classList.remove(
+              "opacity-100"
+            );
+
+          }
+
+
+          lucide.createIcons();
+
+        },
+        1200
+      );
+
+    }
+
+
+    /* ==========================================================
+       SAFE TEXT HELPER
+    ========================================================== */
+
+    function createTextElement(
+      tag,
+      text,
+      className
+    ) {
+
+      const element =
+        document.createElement(tag);
+
+      element.textContent =
+        text || "";
+
+      if (className) {
+
+        element.className =
+          className;
+
+      }
+
+      return element;
+
+    }
+
+
+    /* ==========================================================
+       PRODUCT CARD
+       
+       ONLY:
+       
+       Image
+       Name
+       Description
+       Item No.
+       Article No.
+       Copy Button
+    ========================================================== */
+
+    function renderGrid(items) {
+
+      productGrid.innerHTML = "";
+
+
+      items.forEach(
+        (product, index) => {
+
+          const card =
+            document.createElement("div");
+
+
+          card.className =
+            "group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition duration-300 flex flex-col cursor-pointer";
+
+
+          card.style.animationDelay =
+            `${Math.min(index * 20, 250)}ms`;
+
+
+          /* ====================================================
+             IMAGE
+          ==================================================== */
+
+          const imageContainer =
+            document.createElement("div");
+
+
+          imageContainer.className =
+            "relative aspect-video sm:aspect-square bg-slate-100/30 dark:bg-slate-950/40 overflow-hidden border-b border-slate-100 dark:border-slate-800 flex items-center justify-center";
+
+
+          const image =
+            document.createElement("img");
+
+
+          const imageUrl =
+            product.Image_URL &&
+            product.Image_URL.trim()
+              ? product.Image_URL
+              : parentEmptyImage;
+
+
+          image.src =
+            imageUrl;
+
+
+          image.alt =
+            product.Name ||
+            "Product";
+
+
+          image.loading =
+            "lazy";
+
+
+          image.className =
+            "w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 p-3";
+
+
+          image.onerror =
+            function () {
+
+              this.onerror =
+                null;
+
+              this.src =
+                parentEmptyImage;
+
+            };
+
+
+          imageContainer.appendChild(
+            image
+          );
+
+
+          /* ====================================================
+             CARD COPY BUTTON
+          ==================================================== */
+
+          const copyButton =
+            document.createElement("button");
+
+
+          copyButton.type =
+            "button";
+
+
+          copyButton.className =
+            "absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shadow-md text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 transition hover:scale-110 active:scale-90 cursor-pointer flex items-center justify-center group/card-copy";
+
+
+          copyButton.title =
+            "Copy Image URL, Item No., Product ID, Article No. and UMO";
+
+
+          const copyIcon =
+            document.createElement("i");
+
+
+          copyIcon.setAttribute(
+            "data-lucide",
+            "copy"
+          );
+
+
+          copyIcon.className =
+            "w-3.5 h-3.5";
+
+
+          const copyTooltip =
+            document.createElement("span");
+
+
+          copyTooltip.className =
+            "absolute left-full ml-1.5 bg-slate-950 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover/card-copy:opacity-100 transition whitespace-nowrap pointer-events-none shadow-sm font-sans";
+
+
+          copyTooltip.innerText =
+            "Copy Product Data";
+
+
+          copyButton.appendChild(
+            copyIcon
+          );
+
+          copyButton.appendChild(
+            copyTooltip
+          );
+
+
+          /*
+           * CRITICAL:
+           *
+           * The exact "product" object from this iteration
+           * is captured here.
+           *
+           * Therefore Product A can never accidentally
+           * copy Product B's values.
+           */
+
+          copyButton.addEventListener(
+            "click",
+            event => {
+
+              copyProductData(
+                event,
+                product
+              );
+
+            }
+          );
+
+
+          imageContainer.appendChild(
+            copyButton
+          );
+
+
+          /* ====================================================
+             CARD CONTENT
+          ==================================================== */
+
+          const content =
+            document.createElement("div");
+
+
+          content.className =
+            "p-4 flex-1 flex flex-col";
+
+
+          /* Name */
+          const name =
+            createTextElement(
+              "h3",
+              product.Name || "No Name",
+              "font-bold text-slate-800 dark:text-slate-100 text-sm leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition"
+            );
+
+
+          content.appendChild(
+            name
+          );
+
+
+          /* Description */
+          if (
+            product.Description &&
+            product.Description !== "-"
+          ) {
+
+            const description =
+              createTextElement(
+                "p",
+                product.Description,
+                "text-slate-500 dark:text-slate-400 text-xs mt-2 leading-relaxed line-clamp-2"
+              );
+
+
+            content.appendChild(
+              description
+            );
+
+          }
+
+
+          /* ====================================================
+             REQUIRED CARD FIELDS
+          ==================================================== */
+
+          const details =
+            document.createElement("div");
+
+
+          details.className =
+            "mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2";
+
+
+          /* Item No */
+          const itemRow =
+            document.createElement("div");
+
+
+          itemRow.className =
+            "flex items-center justify-between gap-3";
+
+
+          const itemLabel =
+            createTextElement(
+              "span",
+              "Item No.",
+              "text-[10px] text-slate-400 dark:text-slate-500 font-medium"
+            );
+
+
+          const itemValue =
+            createTextElement(
+              "span",
+              product.Itemnumber || "-",
+              "text-[11px] text-slate-700 dark:text-slate-300 font-semibold font-mono text-right truncate"
+            );
+
+
+          itemRow.appendChild(
+            itemLabel
+          );
+
+          itemRow.appendChild(
+            itemValue
+          );
+
+
+          /* Article */
+          const articleRow =
+            document.createElement("div");
+
+
+          articleRow.className =
+            "flex items-center justify-between gap-3";
+
+
+          const articleLabel =
+            createTextElement(
+              "span",
+              "Article No.",
+              "text-[10px] text-slate-400 dark:text-slate-500 font-medium"
+            );
+
+
+          const articleValue =
+            createTextElement(
+              "span",
+              product.Article || "-",
+              "text-[11px] text-slate-700 dark:text-slate-300 font-semibold font-mono text-right truncate"
+            );
+
+
+          articleRow.appendChild(
+            articleLabel
+          );
+
+          articleRow.appendChild(
+            articleValue
+          );
+
+
+          details.appendChild(
+            itemRow
+          );
+
+          details.appendChild(
+            articleRow
+          );
+
+
+          content.appendChild(
+            details
+          );
+
+
+          /* Details indicator */
+          const detailsFooter =
+            document.createElement("div");
+
+
+          detailsFooter.className =
+            "mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end text-[11px]";
+
+
+          const detailsText =
+            createTextElement(
+              "span",
+              "View Details",
+              "text-indigo-600 dark:text-indigo-400 font-semibold inline-flex items-center space-x-1"
+            );
+
+
+          const detailsIcon =
+            document.createElement("i");
+
+
+          detailsIcon.setAttribute(
+            "data-lucide",
+            "chevron-right"
+          );
+
+
+          detailsIcon.className =
+            "w-3.5 h-3.5";
+
+
+          detailsText.appendChild(
+            detailsIcon
+          );
+
+
+          detailsFooter.appendChild(
+            detailsText
+          );
+
+
+          content.appendChild(
+            detailsFooter
+          );
+
+
+          card.appendChild(
+            imageContainer
+          );
+
+          card.appendChild(
+            content
+          );
+
+
+          /* ====================================================
+             CARD CLICK
+             
+             Copy button stops propagation, so clicking Copy
+             does NOT open the modal.
+          ==================================================== */
+
+          card.addEventListener(
+            "click",
+            () => {
+
+              showDetailModal(
+                product
+              );
+
+            }
+          );
+
+
+          productGrid.appendChild(
+            card
+          );
+
+        }
+      );
+
+
+      lucide.createIcons();
+
+    }
+
+
+    /* ==========================================================
+       MODAL
+       
+       ONLY:
+       
+       Image
+       Name
+       Description
+       Item No.
+       Article No.
+    ========================================================== */
+
+    function showDetailModal(product) {
+
+      /*
+       * Find the exact product in the filtered collection.
+       */
+
+      currentModalIndex =
+        activeFilteredProducts.findIndex(
+          item =>
+            item.rowNumber ===
+            product.rowNumber
+        );
+
+
+      /* Name */
+      document.getElementById(
+        "modalName"
+      ).innerText =
+        product.Name ||
+        "No Name";
+
+
+      /* Description */
+      const descriptionContainer =
+        document.getElementById(
+          "modalDescriptionContainer"
+        );
+
+
+      const description =
+        document.getElementById(
+          "modalDescription"
+        );
+
+
+      if (
+        product.Description &&
+        product.Description !== "-"
+      ) {
+
+        description.innerText =
+          product.Description;
+
+        descriptionContainer.classList.remove(
+          "hidden"
+        );
+
+      } else {
+
+        description.innerText =
+          "";
+
+        descriptionContainer.classList.add(
+          "hidden"
+        );
+
+      }
+
+
+      /* Item Number */
+      document.getElementById(
+        "modalItemnumber"
+      ).innerText =
+        product.Itemnumber ||
+        "-";
+
+
+      /* Article */
+      document.getElementById(
+        "modalArticle"
+      ).innerText =
+        product.Article ||
+        "-";
+
+
+      /* Image */
+      const modalImage =
+        document.getElementById(
+          "modalImage"
+        );
+
+
+      const imageUrl =
+        product.Image_URL &&
+        product.Image_URL.trim()
+          ? product.Image_URL
+          : parentEmptyImage;
+
+
+      modalImage.src =
+        imageUrl;
+
+
+      modalImage.onerror =
+        function () {
+
+          this.onerror =
+            null;
+
+          this.src =
+            parentEmptyImage;
+
+        };
+
+
+      /* Original image link */
+      const originalLink =
+        document.getElementById(
+          "modalOriginalLink"
+        );
+
+
+      if (
+        product.Image_URL &&
+        product.Image_URL.trim()
+      ) {
+
+        originalLink.href =
+          product.Image_URL;
+
+        originalLink.classList.remove(
+          "hidden"
+        );
+
+      } else {
+
+        originalLink.classList.add(
+          "hidden"
+        );
+
+      }
+
+
+      /* ========================================================
+         MODAL COPY
+         
+         IMPORTANT:
+         Capture the exact product object.
+      ======================================================== */
+
+      const modalCopyButton =
+        document.getElementById(
+          "modal-copy-btn"
+        );
+
+
+      modalCopyButton.onclick =
+        event => {
+
+          copyProductData(
+            event,
+            product
+          );
+
+        };
+
+
+      /* ========================================================
+         NAVIGATION
+      ======================================================== */
+
+      const prevButton =
+        document.getElementById(
+          "modal-prev-btn"
+        );
+
+
+      const nextButton =
+        document.getElementById(
+          "modal-next-btn"
+        );
+
+
+      if (
+        currentModalIndex <= 0
+      ) {
+
+        prevButton.classList.add(
+          "opacity-40",
+          "pointer-events-none"
+        );
+
+      } else {
+
+        prevButton.classList.remove(
+          "opacity-40",
+          "pointer-events-none"
+        );
+
+      }
+
+
+      if (
+        currentModalIndex < 0 ||
+        currentModalIndex >=
+        activeFilteredProducts.length - 1
+      ) {
+
+        nextButton.classList.add(
+          "opacity-40",
+          "pointer-events-none"
+        );
+
+      } else {
+
+        nextButton.classList.remove(
+          "opacity-40",
+          "pointer-events-none"
+        );
+
+      }
+
+
+      /* Open modal */
+      modal.classList.remove(
+        "hidden"
+      );
+
+
+      requestAnimationFrame(
+        () => {
+
+          modalBox.classList.remove(
+            "scale-95",
+            "opacity-0"
+          );
+
+          modalBox.classList.add(
+            "scale-100",
+            "opacity-100"
+          );
+
+        }
+      );
+
+
+      lucide.createIcons();
+
+    }
+
+
+    /* ==========================================================
+       MODAL NAVIGATION
+    ========================================================== */
+
+    function navigateModalSequential(
+      direction
+    ) {
+
+      if (
+        activeFilteredProducts.length === 0
+      ) {
+
+        return;
+
+      }
+
+
+      const targetIndex =
+        currentModalIndex +
+        direction;
+
+
+      if (
+        targetIndex >= 0 &&
+        targetIndex <
+          activeFilteredProducts.length
+      ) {
+
+        showDetailModal(
+          activeFilteredProducts[
+            targetIndex
+          ]
+        );
+
+      }
+
+    }
+
+
+    /* ==========================================================
+       CLOSE MODAL
+    ========================================================== */
+
+    function closeModal() {
+
+      modalBox.classList.remove(
+        "scale-100",
+        "opacity-100"
+      );
+
+      modalBox.classList.add(
+        "scale-95",
+        "opacity-0"
+      );
+
+
+      setTimeout(
+        () => {
+
+          modal.classList.add(
+            "hidden"
+          );
+
+        },
+        200
+      );
+
+    }
+
+  </script>
+
+</body>
+</html>
