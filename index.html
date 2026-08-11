@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -2165,25 +2164,22 @@ https://images.unsplash.com/..."
        
        One value per line.
     ========================================================== */
+function buildCopyText(product) {
 
-    function buildCopyText(product) {
+  /*
+   * Copy product data horizontally.
+   * TAB (\t) separates each column.
+   */
 
-      /*
-       * This function receives the exact product object
-       * associated with the clicked card/modal.
-       *
-       * There is no lookup against another row.
-       */
+  return [
+    product.Image_URL || "",
+    product.Itemnumber || "",
+    product.Product_Id || "",
+    product.Article || "",
+    product.UOM || ""
+  ].join("\t");
 
-      return [
-        product.Image_URL || "",
-        product.Itemnumber || "",
-        product.Product_Id || "",
-        product.Article || "",
-        product.UOM || ""
-      ].join("\n");
-
-    }
+}
 
 
     /* ==========================================================
